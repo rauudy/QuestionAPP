@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Cuestionarios</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            width: 90%;
+            max-width: 900px;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .timer {
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .login-form, .quiz-container {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"], input[type="password"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .question-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .question-tile {
+            aspect-ratio: 1;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .question-tile:hover {
+            transform: scale(1.05);
+        }
+
+        .question-tile.current {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .question-tile.answered {
+            border-color: #28a745;
+            background: #28a745;
+            color: white;
+        }
+
+        .question-tile.unanswered {
+            border-color: #dc3545;
+            background: #dc3545;
+            color: white;
+        }
+
+        .question-container {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e1e5e9;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+
+        .question-text {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .answer-section {
+            margin: 20px 0;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .submit-section {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .submit-btn {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            font-size: 1.1em;
+            padding: 15px 30px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error {
+            color: #dc3545;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        .success {
+            color: #28a745;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            background: #e1e5e9;
+            border-radius: 10px;
+            height: 8px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .question-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Plataforma de Cuestionarios</h1>
+            <div class="timer hidden" id="timer">⏰ Tiempo restante: <span id="timeDisplay">30:00</span></div>
+        </div>
+
+        <!-- Formulario de Login -->
+        <div class="login-form" id="loginForm">
+            <h2>Acceso al Cuestionario</h2>
+            <div class="form-group">
+                <label for="username">Usuario:</label>
+                <input type="text" id="username" placeholder="Ingrese su usuario único">
+            </div>
+            <div class="form-group">
+                <label for="accessKey">Clave de Acceso:</label>
+                <input type="password" id="accessKey" placeholder="Ingrese la clave proporcionada">
+            </div>
+            <button onclick="login()" id="loginBtn">Iniciar Cuestionario</button>
+            <div id="loginError" class="error hidden"></div>
+        </div>
+
+        <!-- Contenedor del Cuestionario -->
+        <div class="quiz-container hidden" id="quizContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            
+            <div class="question-grid" id="questionGrid"></div>
+            
+            <div class="question-container" id="questionContainer">
+                <div class="question-text" id="questionText"></div>
+                <div class="answer-section">
+                    <label for="answerInput">Su respuesta:</label>
+                    <textarea id="answerInput" placeholder="Escriba su respuesta aquí..."></textarea>
+                    <div class="button-group">
+                        <button onclick="saveAnswer()" id="saveBtn">💾 Guardar Respuesta</button>
+                        <button onclick="editAnswer()" id="editBtn" class="hidden">✏️ Editar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="submit-section">
+                <button onclick="submitQuiz()" class="submit-btn" id="submitBtn">📤 Enviar Cuestionario Completo</button>
+                <div id="submitMessage" class="hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+        // Tu configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyC_wSuEWniKWXTHEWDPDtX4IbV7Nd5lKj4",
+            authDomain: "questionscrip.firebaseapp.com",
+            projectId: "questionscrip",
+            storageBucket: "questionscrip.firebasestorage.app",
+            messagingSenderId: "278758898241",
+            appId: "1:278758898241:web:2c6a93d591f7ac77c6e4c0"
+        };
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Hacer variables globales disponibles
+        window.db = db;
+        window.firestoreUtils = { doc, getDoc, setDoc, updateDoc, collection, Timestamp };
+    </script>
+
+    <script>
+
+        // Variables globales
+        let currentUser = null;
+        let questions = [];
+        let userAnswers = {};
+        let currentQuestionIndex = 0;
+        let startTime = null;
+        let timer = null;
+        const QUIZ_DURATION = 30 * 60 * 1000; // 30 minutos en milisegundos
+
+        // Banco de preguntas de ejemplo
+        const questionBank = [
+            "¿Cuáles son los principales componentes de una computadora?",
+            "Explique el concepto de algoritmo y proporcione un ejemplo.",
+            "¿Qué diferencias existen entre hardware y software?",
+            "Describa el proceso de compilación de un programa.",
+            "¿Qué es una base de datos relacional?",
+            "Explique los diferentes tipos de redes de computadoras.",
+            "¿Cuáles son los principios de la programación orientada a objetos?",
+            "Describa el funcionamiento del protocolo HTTP.",
+            "¿Qué es la inteligencia artificial y cuáles son sus aplicaciones?",
+            "Explique el concepto de seguridad informática y sus medidas.",
+            "¿Cuáles son los diferentes tipos de sistemas operativos?",
+            "Describa el proceso de desarrollo de software.",
+            "¿Qué es la computación en la nube?",
+            "Explique las estructuras de datos fundamentales.",
+            "¿Cuáles son los componentes de una red de área local (LAN)?",
+            "Describa los principios de la criptografía.",
+            "¿Qué es el big data y cuáles son sus características?",
+            "Explique el funcionamiento de los sistemas de gestión de bases de datos.",
+            "¿Cuáles son los diferentes paradigmas de programación?",
+            "Describa el proceso de testing en el desarrollo de software."
+        ];
+
+        // Función de login
+        async function login() {
+            const username = document.getElementById('username').value.trim();
+            const accessKey = document.getElementById('accessKey').value.trim();
+            const errorDiv = document.getElementById('loginError');
+
+            if (!username || !accessKey) {
+                errorDiv.textContent = 'Por favor complete todos los campos';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                // Verificar credenciales en Firebase
+                const userDocRef = window.firestoreUtils.doc(window.db, 'users', username);
+                const userDoc = await window.firestoreUtils.getDoc(userDocRef);
+                
+                if (!userDoc.exists()) {
+                    errorDiv.textContent = 'Usuario no encontrado';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                const userData = userDoc.data();
+                if (userData.accessKey !== accessKey) {
+                    errorDiv.textContent = 'Clave de acceso incorrecta';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                // Login exitoso
+                currentUser = username;
+                await initializeQuiz();
+                
+            } catch (error) {
+                console.error('Error en login:', error);
+                errorDiv.textContent = 'Error de conexión. Intente nuevamente.';
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        // Inicializar cuestionario
+        async function initializeQuiz() {
+            try {
+                // Verificar si ya existe una sesión activa
+                const sessionDocRef = window.firestoreUtils.doc(window.db, 'sessions', currentUser);
+                const sessionDoc = await window.firestoreUtils.getDoc(sessionDocRef);
+                
+                if (sessionDoc.exists()) {
+                    const sessionData = sessionDoc.data();
+                    startTime = sessionData.startTime.toMillis();
+                    questions = sessionData.questions;
+                    userAnswers = sessionData.answers || {};
+                } else {
+                    // Nueva sesión
+                    startTime = Date.now();
+                    questions = getRandomQuestions(10);
+                    userAnswers = {};
+                    
+                    // Guardar sesión en Firebase
+                    await window.firestoreUtils.setDoc(sessionDocRef, {
+                        startTime: window.firestoreUtils.Timestamp.fromMillis(startTime),
+                        questions: questions,
+                        answers: userAnswers,
+                        submitted: false
+                    });
+                }
+
+                // Mostrar interfaz del cuestionario
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('quizContainer').classList.remove('hidden');
+                document.getElementById('timer').classList.remove('hidden');
+
+                setupQuestionGrid();
+                loadQuestion(0);
+                startTimer();
+
+            } catch (error) {
+                console.error('Error inicializando cuestionario:', error);
+            }
+        }
+
+        // Seleccionar preguntas aleatorias
+        function getRandomQuestions(count) {
+            const shuffled = [...questionBank].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, count);
+        }
+
+        // Configurar grilla de preguntas
+        function setupQuestionGrid() {
+            const grid = document.getElementById('questionGrid');
+            grid.innerHTML = '';
+
+            for (let i = 0; i < questions.length; i++) {
+                const tile = document.createElement('div');
+                tile.className = 'question-tile';
+                tile.textContent = i + 1;
+                tile.onclick = () => loadQuestion(i);
+                grid.appendChild(tile);
+            }
+            updateQuestionGrid();
+        }
+
+        // Actualizar estado visual de la grilla
+        function updateQuestionGrid() {
+            const tiles = document.querySelectorAll('.question-tile');
+            tiles.forEach((tile, index) => {
+                tile.classList.remove('current', 'answered', 'unanswered');
+                
+                if (index === currentQuestionIndex) {
+                    tile.classList.add('current');
+                } else if (userAnswers[index] && userAnswers[index].trim()) {
+                    tile.classList.add('answered');
+                } else {
+                    tile.classList.add('unanswered');
+                }
+            });
+
+            // Actualizar barra de progreso
+            const answered = Object.keys(userAnswers).filter(key => userAnswers[key] && userAnswers[key].trim()).length;
+            const progress = (answered / questions.length) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        // Cargar pregunta específica
+        function loadQuestion(index) {
+            currentQuestionIndex = index;
+            document.getElementById('questionText').textContent = `Pregunta ${index + 1}: ${questions[index]}`;
+            
+            const answerInput = document.getElementById('answerInput');
+            answerInput.value = userAnswers[index] || '';
+            
+            // Actualizar botones
+            const saveBtn = document.getElementById('saveBtn');
+            const editBtn = document.getElementById('editBtn');
+            
+            if (userAnswers[index] && userAnswers[index].trim()) {
+                saveBtn.classList.add('hidden');
+                editBtn.classList.remove('hidden');
+                answerInput.disabled = true;
+            } else {
+                saveBtn.classList.remove('hidden');
+                editBtn.classList.add('hidden');
+                answerInput.disabled = false;
+            }
+
+            updateQuestionGrid();
+        }
+
+        // Guardar respuesta
+        async function saveAnswer() {
+            const answer = document.getElementById('answerInput').value.trim();
+            
+            if (!answer) {
+                alert('Por favor escriba una respuesta antes de guardar.');
+                return;
+            }
+
+            userAnswers[currentQuestionIndex] = answer;
+            
+            try {
+                // Actualizar en Firebase
+                const sessionDocRef = window.firestoreUtils.doc(window.db, 'sessions', currentUser);
+                await window.firestoreUtils.updateDoc(sessionDocRef, {
+                    answers: userAnswers
+                });
+
+                document.getElementById('answerInput').disabled = true;
+                document.getElementById('saveBtn').classList.add('hidden');
+                document.getElementById('editBtn').classList.remove('hidden');
+                
+                updateQuestionGrid();
+                
+            } catch (error) {
+                console.error('Error guardando respuesta:', error);
+                alert('Error al guardar la respuesta. Intente nuevamente.');
+            }
+        }
+
+        // Editar respuesta
+        function editAnswer() {
+            document.getElementById('answerInput').disabled = false;
+            document.getElementById('saveBtn').classList.remove('hidden');
+            document.getElementById('editBtn').classList.add('hidden');
+        }
+
+        // Iniciar temporizador
+        function startTimer() {
+            updateTimerDisplay();
+            timer = setInterval(() => {
+                updateTimerDisplay();
+                
+                const elapsed = Date.now() - startTime;
+                if (elapsed >= QUIZ_DURATION) {
+                    clearInterval(timer);
+                    autoSubmitQuiz();
+                }
+            }, 1000);
+        }
+
+        // Actualizar display del temporizador
+        function updateTimerDisplay() {
+            const elapsed = Date.now() - startTime;
+            const remaining = Math.max(0, QUIZ_DURATION - elapsed);
+            
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            
+            document.getElementById('timeDisplay').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Enviar cuestionario manualmente
+        async function submitQuiz() {
+            if (confirm('¿Está seguro de que desea enviar el cuestionario? No podrá hacer cambios después.')) {
+                await finalizeSubmission();
+            }
+        }
+
+        // Envío automático por tiempo
+        async function autoSubmitQuiz() {
+            alert('El tiempo ha terminado. El cuestionario se enviará automáticamente.');
+            await finalizeSubmission();
+        }
+
+        // Finalizar envío
+        async function finalizeSubmission() {
+            try {
+                const endTime = Date.now();
+                const totalTime = endTime - startTime;
+                
+                // Guardar resultados finales
+                const submissionDocRef = window.firestoreUtils.doc(window.db, 'submissions', currentUser);
+                await window.firestoreUtils.setDoc(submissionDocRef, {
+                    userId: currentUser,
+                    questions: questions,
+                    answers: userAnswers,
+                    startTime: window.firestoreUtils.Timestamp.fromMillis(startTime),
+                    endTime: window.firestoreUtils.Timestamp.fromMillis(endTime),
+                    totalTime: totalTime,
+                    submittedAt: window.firestoreUtils.Timestamp.now()
+                });
+
+                // Marcar sesión como enviada
+                const sessionDocRef = window.firestoreUtils.doc(window.db, 'sessions', currentUser);
+                await window.firestoreUtils.updateDoc(sessionDocRef, {
+                    submitted: true
+                });
+
+                clearInterval(timer);
+                
+                document.getElementById('submitMessage').innerHTML = 
+                    '<div class="success">✅ Cuestionario enviado exitosamente. Gracias por su participación.</div>';
+                document.getElementById('submitMessage').classList.remove('hidden');
+                document.getElementById('submitBtn').disabled = true;
+                
+            } catch (error) {
+                console.error('Error enviando cuestionario:', error);
+                alert('Error al enviar el cuestionario. Intente nuevamente.');
+            }
+        }
+
+        // Prevenir cierre accidental
+        window.addEventListener('beforeunload', function(e) {
+            if (currentUser && !document.getElementById('submitBtn').disabled) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Manejar visibilidad de la página
+        document.addEventListener('visibilitychange', function() {
+            if (currentUser && startTime) {
+                if (document.hidden) {
+                    clearInterval(timer);
+                } else {
+                    startTimer();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
